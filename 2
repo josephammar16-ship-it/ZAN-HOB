@@ -1,0 +1,207 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local remoteEvent = ReplicatedStorage:WaitForChild("BroadcastTextEvent", 15)
+
+if not remoteEvent then return end
+
+-- 1. إنشاء شاشة UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BroadcastGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+-- 2. النص الكبير بمنتصف الشاشة (يظهر لكل الناس)
+local centerLabel = Instance.new("TextLabel")
+centerLabel.Name = "CenterAnnouncement"
+centerLabel.Size = UDim2.new(0.8, 0, 0.2, 0)
+centerLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
+centerLabel.BackgroundTransparency = 1
+centerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+centerLabel.TextScaled = true
+centerLabel.Font = Enum.Font.GothamBold
+centerLabel.Text = ""
+centerLabel.Visible = false
+centerLabel.ZIndex = 10
+centerLabel.Parent = screenGui
+
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Thickness = 4
+uiStroke.Color = Color3.fromRGB(0, 0, 0)
+uiStroke.Parent = centerLabel
+
+-- 3. زر فتح وإغلاق النافذة
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleButton"
+toggleBtn.Size = UDim2.new(0, 110, 0, 40)
+toggleBtn.Position = UDim2.new(0, 20, 0.85, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Text = "اللوحة 📜"
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
+
+-- 4. النافذة الرئيسية (القابلة للتحريك)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 320, 0, 190)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -95)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true
+mainFrame.Parent = screenGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 10)
+frameCorner.Parent = mainFrame
+
+-- شريط التحريك
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 35)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = titleBar
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -40, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "إرسال كلمة للجميع 📢 (اسحب من هنا)"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 12
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleBar
+
+-- زر الإغلاق (✕)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseButton"
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -32, 0, 2)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = titleBar
+
+-- مربع الكتابة
+local textBox = Instance.new("TextBox")
+textBox.Name = "InputTextBox"
+textBox.Size = UDim2.new(0.9, 0, 0, 45)
+textBox.Position = UDim2.new(0.05, 0, 0.28, 0)
+textBox.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.PlaceholderText = "اكتب أي كلمة هنا..."
+textBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
+textBox.Font = Enum.Font.Gotham
+textBox.TextSize = 15
+textBox.ClearTextOnFocus = false
+textBox.Parent = mainFrame
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 8)
+boxCorner.Parent = textBox
+
+-- زر الإرسال
+local sendBtn = Instance.new("TextButton")
+sendBtn.Name = "SendButton"
+sendBtn.Size = UDim2.new(0.9, 0, 0, 40)
+sendBtn.Position = UDim2.new(0.05, 0, 0.65, 0)
+sendBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+sendBtn.Text = "إظهار لكل الناس 🚀"
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 15
+sendBtn.Parent = mainFrame
+
+local sendCorner = Instance.new("UICorner")
+sendCorner.CornerRadius = UDim.new(0, 8)
+sendCorner.Parent = sendBtn
+
+-- 5. كود تحريك النافذة بالماوس أو اللمس
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
+
+-- 6. أزرار الفتح والإغلاق
+closeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- 7. إرسال الكلمة
+sendBtn.MouseButton1Click:Connect(function()
+	local textToSend = textBox.Text
+	if textToSend and textToSend:gsub("%s+", "") ~= "" then
+		remoteEvent:FireServer(textToSend)
+		textBox.Text = ""
+	end
+end)
+
+-- 8. عرض النص لكل اللاعبين بمنتصف الشاشة لمدة 3 ثوانٍ
+local currentAnnounceId = 0
+
+remoteEvent.OnClientEvent:Connect(function(messageText)
+	currentAnnounceId = currentAnnounceId + 1
+	local thisId = currentAnnounceId
+
+	centerLabel.Text = messageText
+	centerLabel.Visible = true
+
+	task.wait(3)
+
+	if currentAnnounceId == thisId then
+		centerLabel.Visible = false
+		centerLabel.Text = ""
+	end
+end)
