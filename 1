@@ -1,0 +1,16 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- إنشاء RemoteEvent للربط بين السيرفر واللاعبين
+local remoteEvent = ReplicatedStorage:FindFirstChild("BroadcastTextEvent")
+if not remoteEvent then
+	remoteEvent = Instance.new("RemoteEvent")
+	remoteEvent.Name = "BroadcastTextEvent"
+	remoteEvent.Parent = ReplicatedStorage
+end
+
+-- استقبال الكلمة وإرسالها لجميع اللاعبين
+remoteEvent.OnServerEvent:Connect(function(player, text)
+	if text and type(text) == "string" and #text > 0 then
+		remoteEvent:FireAllClients(text)
+	end
+end)
